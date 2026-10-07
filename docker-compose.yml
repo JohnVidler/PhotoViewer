@@ -1,7 +1,9 @@
 services:
   photoviewer:
+    # Runs the published image by default; `docker compose up --build` builds from source instead.
+    image: ghcr.io/johnvidler/photoviewer:main
+    pull_policy: missing
     build: .
-    image: photoviewer:latest
     ports:
       - "3000:3000"
     volumes:

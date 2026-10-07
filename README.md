@@ -27,15 +27,17 @@ Supported formats: JPEG, PNG, WebP, GIF, AVIF, TIFF, and BMP. BMP files are list
 You need Docker with the Compose plugin.
 
 1. Put your photos in `./mountable/photos`, or edit the volume paths in `docker-compose.yml` to point at your existing library (see below).
-2. Build and start the container:
+2. Start the container:
 
    ```sh
-   docker compose up --build -d
+   docker compose up -d
    ```
+
+   This pulls the published image, `ghcr.io/johnvidler/photoviewer:main`. To build from your local source instead, run `docker compose up --build -d`.
 
 3. Open <http://localhost:3000>.
 
-To stop it, run `docker compose down`. After pulling new code, run `docker compose up --build -d` again to rebuild.
+To stop it, run `docker compose down`. To update to the latest published image, run `docker compose pull`, then `docker compose up -d`.
 
 ### Mounting the photos and cache folders
 
@@ -77,11 +79,10 @@ You can set these environment variables under `environment` in `docker-compose.y
 ## Running without Compose
 
 ```sh
-docker build -t photoviewer .
 docker run -d --name photoviewer \
   -p 3000:3000 \
   -v /path/to/your/photos:/data/photos:ro \
   -v /path/to/a/cache/folder:/data/cache \
   --restart unless-stopped \
-  photoviewer
+  ghcr.io/johnvidler/photoviewer:main
 ```
