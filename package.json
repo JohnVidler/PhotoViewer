@@ -1,0 +1,21 @@
+{
+  "name": "photoviewer",
+  "version": "1.0.0",
+  "description": "Self-hosted photo gallery with automatic thumbnail caching",
+  "license": "MIT",
+  "author": "John Vidler",
+  "private": true,
+  "type": "commonjs",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client && npm run build -w server",
+    "start": "npm run start -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client"
+  }
+}
+

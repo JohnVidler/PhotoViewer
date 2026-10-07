@@ -1,0 +1,16 @@
+services:
+  photoviewer:
+    build: .
+    image: photoviewer:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./mountable/photos:/data/photos:ro
+      - ./mountable/cache:/data/cache
+    environment:
+      PHOTOS_DIR: /data/photos
+      CACHE_DIR: /data/cache
+      PORT: "3000"
+      # Set to "true" if changes to the photos folder aren't picked up (e.g. NFS/SMB mounts).
+      WATCH_POLLING: "false"
+    restart: unless-stopped
