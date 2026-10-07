@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-alpine AS deps
+# deps/build only produce platform-independent JS and static files, so they run on the
+# builder's native platform; only prod-deps (native sharp binaries) and runtime target the image platform.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json ./
 COPY server/package.json server/package.json
