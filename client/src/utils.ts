@@ -60,3 +60,18 @@ export function formatShutterSpeed(seconds: number): string {
   }
   return `1/${Math.round(1 / seconds)} s`;
 }
+
+const dayLabelFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: "full" });
+
+/** Formats a timestamp (ms) as a long date, e.g. "Friday, 3 October 2025". */
+export function formatDayLabel(ms: number): string {
+  return dayLabelFormatter.format(new Date(ms));
+}
+
+/** A sortable local-calendar-day key (YYYY-MM-DD) for grouping timestamps by day. */
+export function dayKey(ms: number): string {
+  const date = new Date(ms);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}

@@ -851,3 +851,95 @@ a {
 .state-message--error {
   color: #ff8080;
 }
+
+/* Day groups */
+
+.day-group + .day-group {
+  margin-top: 1.75rem;
+}
+
+.day-group__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  scroll-margin-top: 1rem;
+}
+
+/* Date rail: day markers alongside the scrollbar */
+
+.date-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.date-rail__position {
+  position: absolute;
+  right: 0;
+  width: 14px;
+  height: 2px;
+  background: var(--color-accent);
+  opacity: 0.6;
+}
+
+.date-rail__tick {
+  position: absolute;
+  right: 0;
+  width: 14px;
+  height: 10px;
+  margin-top: -5px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.date-rail__tick::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 0;
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-text-muted);
+  transition: width 0.12s ease, background 0.12s ease;
+}
+
+.date-rail__tick--active::before,
+.date-rail__tick:hover::before,
+.date-rail__tick:focus-visible::before {
+  width: 14px;
+  background: var(--color-accent);
+}
+
+.date-rail__label {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-hover);
+  box-shadow: var(--shadow-card);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.date-rail__tick:hover .date-rail__label,
+.date-rail__tick:focus-visible .date-rail__label {
+  opacity: 1;
+}

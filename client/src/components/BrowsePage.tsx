@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { dayKey } from "../utils";
 import { useBrowse } from "../hooks/useBrowse";
 import Breadcrumbs from "./Breadcrumbs";
 import FolderGrid from "./FolderGrid";
@@ -17,6 +18,15 @@ export default function BrowsePage({ relPath, onOpenSidebar }: BrowsePageProps) 
   // if it disappears from disk the viewer simply closes.
   const [viewerPath, setViewerPath] = useState<string | null>(null);
 
+  // Newest day first; the viewer navigates in this same order so it matches the grid.
+  const photos = useMemo(
+    () =>
+      [...(data?.photos ?? [])].sort(
+        (a, b) => dayKey(b.birthtimeMs).localeCompare(dayKey(a.birthtimeMs)) || a.name.localeCompare(b.name),
+      ),
+    [data],
+  );
+
   const title = relPath ? relPath.split("/").pop()! : "Library";
 
   let body;
@@ -27,7 +37,6 @@ export default function BrowsePage({ relPath, onOpenSidebar }: BrowsePageProps) 
   } else if (data.folders.length === 0 && data.photos.length === 0) {
     body = <div className="state-message">This folder is empty.</div>;
   } else {
-    const photos = data.photos;
     const viewerIndex = viewerPath === null ? -1 : photos.findIndex((photo) => photo.path === viewerPath);
 
     body = (
