@@ -16,6 +16,8 @@ export interface PhotoEntry {
   path: string;
   mtimeMs: number;
   birthtimeMs: number;
+  /** EXIF capture time as written by the camera ("2024:05:01 12:34:56", no timezone), if present. */
+  takenAt?: string | undefined;
   size: number;
 }
 

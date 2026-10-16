@@ -1,6 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { resolvePhotoPath } from "./paths";
+import { readTakenAt } from "./photoDate";
 import type { BrowseResult, FolderEntry, PhotoEntry, PhotoPreview } from "../types";
 
 const IMAGE_EXTENSIONS = new Set([
@@ -43,12 +44,14 @@ export async function browseDirectory(relPath: string): Promise<BrowseResult> {
     }
 
     if (entry.isFile() && isImageFile(entry.name)) {
-      const fileStat = await stat(path.join(absolute, entry.name));
+      const filePath = path.join(absolute, entry.name);
+      const fileStat = await stat(filePath);
       photos.push({
         name: entry.name,
         path: entryRelPath,
         mtimeMs: fileStat.mtimeMs,
         birthtimeMs: fileStat.birthtimeMs,
+        takenAt: await readTakenAt(filePath, fileStat.mtimeMs),
         size: fileStat.size,
       });
     }

@@ -39,6 +39,30 @@ export function formatExifDate(value: string): string {
   return formatDateTime(new Date(year!, month! - 1, day!, hours!, minutes!, seconds!).getTime());
 }
 
+/**
+ * The date a photo should be sorted and grouped by: the EXIF capture time when present
+ * (read as local wall-clock time), otherwise the file's creation time.
+ */
+export function photoDateMs(photo: { takenAt?: string | undefined; birthtimeMs: number; mtimeMs: number }): number {
+  const match = photo.takenAt ? /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(photo.takenAt) : null;
+  if (match) {
+    const [year, month, day, hours, minutes, seconds] = match.slice(1).map(Number) as [
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+    ];
+    const ms = new Date(year, month - 1, day, hours, minutes, seconds).getTime();
+    if (!Number.isNaN(ms)) {
+      return ms;
+    }
+  }
+
+  return photo.birthtimeMs > 0 ? photo.birthtimeMs : photo.mtimeMs;
+}
+
 /** Formats a byte count using binary units (e.g. "4.2 MB"). */
 export function formatBytes(bytes: number): string {
   const units = ["bytes", "KB", "MB", "GB"];

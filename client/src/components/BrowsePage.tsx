@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { dayKey } from "../utils";
+import { dayKey, photoDateMs } from "../utils";
 import { useBrowse } from "../hooks/useBrowse";
 import Breadcrumbs from "./Breadcrumbs";
 import FolderGrid from "./FolderGrid";
@@ -22,7 +22,7 @@ export default function BrowsePage({ relPath, onOpenSidebar }: BrowsePageProps) 
   const photos = useMemo(
     () =>
       [...(data?.photos ?? [])].sort(
-        (a, b) => dayKey(b.birthtimeMs).localeCompare(dayKey(a.birthtimeMs)) || a.name.localeCompare(b.name),
+        (a, b) => dayKey(photoDateMs(b)).localeCompare(dayKey(photoDateMs(a))) || a.name.localeCompare(b.name),
       ),
     [data],
   );

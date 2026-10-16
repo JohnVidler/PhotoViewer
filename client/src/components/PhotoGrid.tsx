@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { thumbnailUrl } from "../api";
-import { dayKey, formatDate, formatDayLabel, stripExtension } from "../utils";
+import { dayKey, formatDate, formatDayLabel, photoDateMs, stripExtension } from "../utils";
 import type { PhotoEntry } from "../types";
 import DateRail from "./DateRail";
 
@@ -20,10 +20,11 @@ export default function PhotoGrid({ photos, onSelect }: PhotoGridProps) {
   const groups = useMemo(() => {
     const result: DayGroup[] = [];
     photos.forEach((photo, index) => {
-      const key = dayKey(photo.birthtimeMs);
+      const dateMs = photoDateMs(photo);
+      const key = dayKey(dateMs);
       let group = result[result.length - 1];
       if (!group || group.key !== key) {
-        group = { key, label: formatDayLabel(photo.birthtimeMs), items: [] };
+        group = { key, label: formatDayLabel(dateMs), items: [] };
         result.push(group);
       }
       group.items.push({ photo, index });
@@ -60,7 +61,7 @@ export default function PhotoGrid({ photos, onSelect }: PhotoGridProps) {
                 />
                 <span className="photo-card__overlay">
                   <span className="photo-card__title">{stripExtension(photo.name)}</span>
-                  <span className="photo-card__date">{formatDate(photo.birthtimeMs)}</span>
+                  <span className="photo-card__date">{formatDate(photoDateMs(photo))}</span>
                 </span>
               </button>
             ))}
