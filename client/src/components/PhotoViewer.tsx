@@ -53,7 +53,19 @@ export default function PhotoViewer({ photos, index, onClose, onNavigate }: Phot
   }
 
   return (
-    <div className="viewer" role="dialog" aria-modal="true" aria-label={photo.name}>
+    <div
+      className="viewer"
+      role="dialog"
+      aria-modal="true"
+      aria-label={photo.name}
+      onClick={(event) => {
+        // Clicking the dimmed background does the same as the X button. Clicks that land on the photo, the
+        // buttons, the caption or the details panel bubble up here too, but their target isn't the backdrop.
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="viewer__toolbar">
         <a
           className="viewer__button"

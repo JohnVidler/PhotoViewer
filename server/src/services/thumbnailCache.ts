@@ -1,9 +1,9 @@
-import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { createHash, randomBytes } from "node:crypto";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { config } from "../config";
-import { resolvePhotoPath } from "./paths";
+import { resolvePhotoPath, type PhotoRoot } from "./paths";
 
 const MANIFEST_FILE_NAME = ".thumbnail-manifest.json";
 
@@ -68,45 +68,77 @@ async function removeThumbnailFilesForHash(hash: string): Promise<void> {
  * The cache key embeds the source file's mtime, so edited source files automatically
  * invalidate their old thumbnail and a fresh one is generated on next request.
  */
-export async function getOrCreateThumbnail(relPath: string, size = config.thumbnailSize): Promise<string> {
+export async function getOrCreateThumbnail(
+  root: PhotoRoot,
+  relPath: string,
+  size = config.thumbnailSize,
+): Promise<string> {
   await ensureCacheDir();
 
-  const sourceAbsolute = resolvePhotoPath(relPath);
+  const sourceAbsolute = await resolvePhotoPath(root, relPath);
   const sourceStat = await stat(sourceAbsolute);
-  const hash = hashPath(relPath);
+  // Cache entries are namespaced by owner so two users' identically named files never collide.
+  const scopedPath = `${root.key}/${relPath}`;
+  const hash = hashPath(scopedPath);
   const fileName = cacheFileName(hash, size, sourceStat.mtimeMs);
   const cacheAbsolute = path.join(config.cacheDir, fileName);
 
-  void rememberSourcePath(hash, relPath);
+  void rememberSourcePath(hash, scopedPath);
 
   const cached = await stat(cacheAbsolute).catch(() => null);
   if (cached) {
     return cacheAbsolute;
   }
 
-  await sharp(sourceAbsolute)
-    .rotate()
-    .resize({ width: size, height: size, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: config.thumbnailQuality })
-    .toFile(cacheAbsolute);
+  // Several requests often want the same thumbnail at once (a photo shown in two places). Share one job.
+  let job = generating.get(cacheAbsolute);
+  if (!job) {
+    job = generateThumbnail(sourceAbsolute, cacheAbsolute, size)
+      .then(() => {
+        void pruneStaleThumbnails(hash, size, fileName);
+        return cacheAbsolute;
+      })
+      .finally(() => generating.delete(cacheAbsolute));
+    generating.set(cacheAbsolute, job);
+  }
 
-  void pruneStaleThumbnails(hash, fileName);
-
-  return cacheAbsolute;
+  return job;
 }
 
-/** Removes older cached thumbnails for the same source path once a fresh one exists. */
-async function pruneStaleThumbnails(hash: string, currentFileName: string): Promise<void> {
+const generating = new Map<string, Promise<string>>();
+
+/** Writes to a temporary file and renames it into place, so a reader never sees a half-written thumbnail. */
+async function generateThumbnail(sourceAbsolute: string, cacheAbsolute: string, size: number): Promise<void> {
+  const temporary = `${cacheAbsolute}.${randomBytes(4).toString("hex")}.tmp`;
+  try {
+    await sharp(sourceAbsolute)
+      .rotate()
+      .resize({ width: size, height: size, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: config.thumbnailQuality })
+      .toFile(temporary);
+    await rename(temporary, cacheAbsolute);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * Removes older versions of one thumbnail (same photo, same size, earlier modification time) once a fresh one
+ * exists. Other sizes of the same photo are separate thumbnails in use elsewhere and must be left alone.
+ */
+async function pruneStaleThumbnails(hash: string, size: number, currentFileName: string): Promise<void> {
   const entries = await readdir(config.cacheDir).catch(() => [] as string[]);
+  const sizePrefix = `${hash}-${size}-`;
 
   const stalePromises = entries
-    .filter((entry) => entry.startsWith(`${hash}-`) && entry !== currentFileName)
+    .filter((entry) => entry.startsWith(sizePrefix) && entry.endsWith(".webp") && entry !== currentFileName)
     .map((entry) => rm(path.join(config.cacheDir, entry), { force: true }).catch(() => undefined));
 
   await Promise.all(stalePromises);
 }
 
-/** Removes every cached thumbnail for a single source path (used when a file is deleted or moved). */
+/** Removes every cached thumbnail for a single source path, given relative to the photos directory. */
 export async function removeCachedThumbnails(relPath: string): Promise<void> {
   const hash = hashPath(relPath);
   await removeThumbnailFilesForHash(hash);
@@ -145,7 +177,8 @@ export async function reconcileThumbnailCache(): Promise<void> {
 
   await Promise.all(
     [...manifest.entries()].map(async ([hash, relPath]) => {
-      const exists = await stat(resolvePhotoPath(relPath))
+      // Manifest entries are paths relative to the photos directory (owner slug first).
+      const exists = await stat(path.join(config.photosDir, relPath))
         .then(() => true)
         .catch(() => false);
 

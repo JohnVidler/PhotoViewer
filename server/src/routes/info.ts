@@ -1,6 +1,6 @@
 import { Router } from "express";
+import { resolveScope, sendScopeError } from "../services/access";
 import { getPhotoInfo } from "../services/photoInfo";
-import { normalizeRelPath, UnsafePathError } from "../services/paths";
 
 export const infoRouter = Router();
 
@@ -12,11 +12,10 @@ infoRouter.get("/", async (req, res) => {
       return;
     }
 
-    const relPath = normalizeRelPath(rawPath);
-    res.json(await getPhotoInfo(relPath));
+    const scope = await resolveScope(req.user ?? null, rawPath);
+    res.json(await getPhotoInfo(scope.root, scope.relPath));
   } catch (error) {
-    if (error instanceof UnsafePathError) {
-      res.status(400).json({ error: error.message });
+    if (sendScopeError(res, error)) {
       return;
     }
 

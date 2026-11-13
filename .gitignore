@@ -3,3 +3,4 @@ dist/
 mountable/
 *.log
 .DS_Store
+.env

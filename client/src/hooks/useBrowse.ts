@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchBrowse, subscribeToChanges } from "../api";
+import { fetchBrowse, ITEMS_CHANGED_EVENT, subscribeToChanges } from "../api";
 import type { BrowseResult } from "../types";
 
 interface BrowseState {
@@ -42,10 +42,13 @@ export function useBrowse(relPath: string): { data: BrowseResult | null; error: 
         load();
       }
     }, load);
+    // Our own moves, renames and deletes: refresh immediately instead of waiting for the file watcher.
+    window.addEventListener(ITEMS_CHANGED_EVENT, load);
 
     return () => {
       cancelled = true;
       unsubscribe();
+      window.removeEventListener(ITEMS_CHANGED_EVENT, load);
     };
   }, [relPath]);
 

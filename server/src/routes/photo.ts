@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Router } from "express";
-import { normalizeRelPath, resolvePhotoPath, UnsafePathError } from "../services/paths";
+import { resolveScope, sendScopeError } from "../services/access";
+import { resolvePhotoPath } from "../services/paths";
 
 export const photoRouter = Router();
 
@@ -12,10 +13,10 @@ photoRouter.get("/", async (req, res) => {
       return;
     }
 
-    const relPath = normalizeRelPath(rawPath);
-    const absolute = resolvePhotoPath(relPath);
+    const scope = await resolveScope(req.user ?? null, rawPath);
+    const absolute = await resolvePhotoPath(scope.root, scope.relPath);
 
-    res.set("Cache-Control", "public, max-age=3600");
+    res.set("Cache-Control", "private, max-age=3600");
     if (req.query["download"] === "1") {
       res.attachment(path.basename(absolute));
     }
@@ -25,8 +26,7 @@ photoRouter.get("/", async (req, res) => {
       }
     });
   } catch (error) {
-    if (error instanceof UnsafePathError) {
-      res.status(400).json({ error: error.message });
+    if (sendScopeError(res, error)) {
       return;
     }
 

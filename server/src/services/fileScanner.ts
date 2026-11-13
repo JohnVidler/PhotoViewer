@@ -1,6 +1,6 @@
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { resolvePhotoPath } from "./paths";
+import { resolvePhotoPath, type PhotoRoot } from "./paths";
 import { readTakenAt } from "./photoDate";
 import type { BrowseResult, FolderEntry, PhotoEntry, PhotoPreview } from "../types";
 
@@ -23,9 +23,11 @@ export function isImageFile(fileName: string): boolean {
 }
 
 /** Lists the folders and photos directly inside the given relative directory. */
-export async function browseDirectory(relPath: string): Promise<BrowseResult> {
-  const absolute = resolvePhotoPath(relPath);
+export async function browseDirectory(root: PhotoRoot, relPath: string): Promise<BrowseResult> {
+  const absolute = await resolvePhotoPath(root, relPath);
   const entries = await readdir(absolute, { withFileTypes: true });
+  // Paths sent to the client are what it asks for next, so inside a share they carry the share's prefix.
+  const display = (rel: string) => (root.prefix + rel).replace(/\/$/, "");
 
   const folders: FolderEntry[] = [];
   const photos: PhotoEntry[] = [];
@@ -38,8 +40,8 @@ export async function browseDirectory(relPath: string): Promise<BrowseResult> {
     const entryRelPath = relPath ? `${relPath}/${entry.name}` : entry.name;
 
     if (entry.isDirectory()) {
-      const { photoCount, previews } = await summarizeFolder(path.join(absolute, entry.name), entryRelPath);
-      folders.push({ name: entry.name, path: entryRelPath, photoCount, previews });
+      const { photoCount, previews } = await summarizeFolder(path.join(absolute, entry.name), display(entryRelPath));
+      folders.push({ name: entry.name, path: display(entryRelPath), photoCount, previews });
       continue;
     }
 
@@ -48,7 +50,7 @@ export async function browseDirectory(relPath: string): Promise<BrowseResult> {
       const fileStat = await stat(filePath);
       photos.push({
         name: entry.name,
-        path: entryRelPath,
+        path: display(entryRelPath),
         mtimeMs: fileStat.mtimeMs,
         birthtimeMs: fileStat.birthtimeMs,
         takenAt: await readTakenAt(filePath, fileStat.mtimeMs),
@@ -60,9 +62,15 @@ export async function browseDirectory(relPath: string): Promise<BrowseResult> {
   folders.sort((a, b) => a.name.localeCompare(b.name));
   photos.sort((a, b) => a.name.localeCompare(b.name));
 
-  const parentPath = relPath ? path.dirname(relPath).replace(/^\.$/, "") : null;
+  const parentRel = path.dirname(relPath).replace(/^\.$/, "");
+  const parentPath = relPath ? display(parentRel) : null;
 
-  return { path: relPath, parentPath, folders, photos };
+  return { path: display(relPath), parentPath, folders, photos };
+}
+
+/** Photo count and cover photos for a whole folder; `displayPath` is the path the client will use for it. */
+export async function describeFolder(absoluteDir: string, displayPath: string) {
+  return summarizeFolder(absoluteDir, displayPath);
 }
 
 /** Picks `count` items spread evenly across a list, so previews aren't all from one burst of shots. */
@@ -107,22 +115,4 @@ async function summarizeFolder(
   }
 
   return { photoCount, previews };
-}
-
-/** Finds the first photo within a directory (recursing into subfolders) to use as a cover. */
-export async function findCoverPhoto(relPath: string): Promise<string | null> {
-  const { photos, folders } = await browseDirectory(relPath);
-
-  if (photos[0]) {
-    return photos[0].path;
-  }
-
-  for (const folder of folders) {
-    const nested = await findCoverPhoto(folder.path);
-    if (nested) {
-      return nested;
-    }
-  }
-
-  return null;
 }

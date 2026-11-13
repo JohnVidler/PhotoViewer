@@ -2,7 +2,7 @@
 
 # deps/build only produce platform-independent JS and static files, so they run on the
 # builder's native platform; only prod-deps (native sharp binaries) and runtime target the image platform.
-FROM --platform=$BUILDPLATFORM node:20-alpine AS deps
+FROM --platform=$BUILDPLATFORM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json ./
 COPY server/package.json server/package.json
@@ -13,20 +13,21 @@ FROM deps AS build
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS prod-deps
+FROM node:26-alpine AS prod-deps
 WORKDIR /app/server
 COPY server/package.json ./
 RUN npm install --omit=dev
 
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     PHOTOS_DIR=/data/photos \
     CACHE_DIR=/data/cache \
+    CONFIG_DIR=/data/config \
     PORT=3000
 
 RUN addgroup -S photoviewer && adduser -S photoviewer -G photoviewer \
-  && mkdir -p /data/photos /data/cache \
+  && mkdir -p /data/photos /data/cache /data/config \
   && chown -R photoviewer:photoviewer /data
 
 COPY --from=prod-deps /app/server/node_modules ./server/node_modules
@@ -36,6 +37,6 @@ COPY server/package.json ./server/package.json
 
 USER photoviewer
 EXPOSE 3000
-VOLUME ["/data/photos", "/data/cache"]
+VOLUME ["/data/photos", "/data/cache", "/data/config"]
 
 CMD ["node", "server/dist/index.js"]

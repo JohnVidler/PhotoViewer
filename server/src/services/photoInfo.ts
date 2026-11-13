@@ -2,7 +2,7 @@ import exifr from "exifr";
 import { open, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
-import { resolvePhotoPath } from "./paths";
+import { resolvePhotoPath, type PhotoRoot } from "./paths";
 import type { PhotoInfo } from "../types";
 
 const MIME_TYPES: Record<string, string> = {
@@ -169,8 +169,8 @@ function toDisplayValue(value: unknown): string | number | boolean | undefined {
 }
 
 /** Collects file, image, compression and embedded (EXIF/GPS/IPTC/XMP/ICC) metadata for a photo. */
-export async function getPhotoInfo(relPath: string): Promise<PhotoInfo> {
-  const absolute = resolvePhotoPath(relPath);
+export async function getPhotoInfo(root: PhotoRoot, relPath: string): Promise<PhotoInfo> {
+  const absolute = await resolvePhotoPath(root, relPath);
   const fileStat = await stat(absolute);
   const extension = path.extname(absolute).toLowerCase();
 
@@ -220,7 +220,7 @@ export async function getPhotoInfo(relPath: string): Promise<PhotoInfo> {
   return {
     file: {
       name: path.basename(absolute),
-      path: relPath,
+      path: root.prefix + relPath,
       size: fileStat.size,
       mimeType: MIME_TYPES[extension] ?? "application/octet-stream",
       modifiedMs: fileStat.mtimeMs,

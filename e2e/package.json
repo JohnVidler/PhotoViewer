@@ -1,0 +1,9 @@
+{
+  "name": "photoviewer-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Real-browser checks for PhotoViewer. Not part of the app or its build.",
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

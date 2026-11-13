@@ -9,6 +9,8 @@ export interface FolderEntry {
   photoCount: number;
   /** A handful of photos from the folder (or its subfolders) for the tile mosaic. */
   previews: PhotoPreview[];
+  /** The visitor has shared this album with other people or via a public link. */
+  shared?: boolean;
 }
 
 export interface PhotoEntry {
@@ -26,6 +28,16 @@ export interface BrowseResult {
   parentPath: string | null;
   folders: FolderEntry[];
   photos: PhotoEntry[];
+  /** Present when the folder belongs to somebody else's share or a public link rather than the visitor's own library. */
+  scope?: ShareScope;
+}
+
+export interface ShareScope {
+  kind: "shared" | "public";
+  /** Name of the shared folder. */
+  name: string;
+  ownerName: string;
+  canWrite: boolean;
 }
 
 export interface PhotoInfo {

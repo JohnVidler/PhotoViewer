@@ -1,6 +1,6 @@
 import { Router } from "express";
+import { resolveScope, sendScopeError } from "../services/access";
 import { getOrCreateThumbnail } from "../services/thumbnailCache";
-import { normalizeRelPath, UnsafePathError } from "../services/paths";
 import { config } from "../config";
 
 export const thumbnailRouter = Router();
@@ -17,15 +17,14 @@ thumbnailRouter.get("/", async (req, res) => {
     const size = typeof rawSize === "string" ? Number.parseInt(rawSize, 10) : config.thumbnailSize;
     const safeSize = Number.isFinite(size) && size > 0 ? Math.min(size, 2000) : config.thumbnailSize;
 
-    const relPath = normalizeRelPath(rawPath);
-    const thumbnailPath = await getOrCreateThumbnail(relPath, safeSize);
+    const scope = await resolveScope(req.user ?? null, rawPath);
+    const thumbnailPath = await getOrCreateThumbnail(scope.root, scope.relPath, safeSize);
 
-    res.set("Cache-Control", "public, max-age=31536000, immutable");
+    res.set("Cache-Control", "private, max-age=31536000, immutable");
     res.type("image/webp");
     res.sendFile(thumbnailPath);
   } catch (error) {
-    if (error instanceof UnsafePathError) {
-      res.status(400).json({ error: error.message });
+    if (sendScopeError(res, error)) {
       return;
     }
 

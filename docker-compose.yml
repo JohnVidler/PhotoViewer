@@ -7,12 +7,29 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./mountable/photos:/data/photos:ro
+      # Read-write: each user gets a folder inside, and uploads are written there.
+      - ./mountable/photos:/data/photos
       - ./mountable/cache:/data/cache
+      # Holds the accounts database. Back this up; unlike the cache it can't be regenerated.
+      - ./mountable/config:/data/config
     environment:
       PHOTOS_DIR: /data/photos
       CACHE_DIR: /data/cache
+      CONFIG_DIR: /data/config
       PORT: "3000"
+
+      # --- Accounts ---
+      # The first run prints a one-time setup code in the logs (`docker compose logs photoviewer`); it is
+      # needed to create the administrator account. Set your own instead if you prefer:
+      # SETUP_CODE: "choose-something-secret"
+      #
+      # Behind a reverse proxy such as nginx-proxy-manager, set this to the number of proxies in front of the
+      # app (usually 1) so login throttling sees each visitor's real address:
+      TRUST_PROXY: "1"
+      # Set to "true" once the site is served over HTTPS (the browser then only sends the login cookie over HTTPS):
+      SECURE_COOKIES: "false"
+      # Optional: per-file upload limit in MB (default 200).
+      # MAX_UPLOAD_MB: "200"
       # Set to "true" if changes to the photos folder aren't picked up (e.g. NFS/SMB mounts).
       WATCH_POLLING: "false"
     restart: unless-stopped

@@ -1,18 +1,44 @@
 import { Router } from "express";
+import { resolveScope, sendScopeError } from "../services/access";
 import { browseDirectory } from "../services/fileScanner";
-import { normalizeRelPath, UnsafePathError } from "../services/paths";
+import { listSharedPaths } from "../services/shares";
 
 export const browseRouter = Router();
 
 browseRouter.get("/", async (req, res) => {
   try {
     const rawPath = typeof req.query["path"] === "string" ? req.query["path"] : "";
-    const relPath = normalizeRelPath(rawPath);
-    const result = await browseDirectory(relPath);
-    res.json(result);
+    const scope = await resolveScope(req.user ?? null, rawPath);
+    const result = await browseDirectory(scope.root, scope.relPath);
+
+    // In the user's own library, flag the albums they have shared with others.
+    if (scope.kind === "own") {
+      const shared = listSharedPaths(scope.ownerId);
+      if (shared.size > 0) {
+        for (const folder of result.folders) {
+          if (shared.has(folder.path)) {
+            folder.shared = true;
+          }
+        }
+      }
+    }
+
+    res.set("Cache-Control", "no-store");
+    res.json(
+      scope.info
+        ? {
+            ...result,
+            scope: {
+              kind: scope.kind === "public" ? "public" : "shared",
+              name: scope.info.name,
+              ownerName: scope.info.ownerName,
+              canWrite: scope.canWrite,
+            },
+          }
+        : result,
+    );
   } catch (error) {
-    if (error instanceof UnsafePathError) {
-      res.status(400).json({ error: error.message });
+    if (sendScopeError(res, error)) {
       return;
     }
 
