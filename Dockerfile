@@ -26,7 +26,8 @@ ENV NODE_ENV=production \
     CONFIG_DIR=/data/config \
     PORT=3000
 
-RUN addgroup -S photoviewer && adduser -S photoviewer -G photoviewer \
+RUN apk add --no-cache su-exec \
+  && addgroup -S photoviewer && adduser -S photoviewer -G photoviewer \
   && mkdir -p /data/photos /data/cache /data/config \
   && chown -R photoviewer:photoviewer /data
 
@@ -34,9 +35,11 @@ COPY --from=prod-deps /app/server/node_modules ./server/node_modules
 COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/client/dist ./client/dist
 COPY server/package.json ./server/package.json
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-USER photoviewer
+# Starts as root only to fix bind-mount ownership, then drops to the photoviewer user.
 EXPOSE 3000
 VOLUME ["/data/photos", "/data/cache", "/data/config"]
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server/dist/index.js"]
