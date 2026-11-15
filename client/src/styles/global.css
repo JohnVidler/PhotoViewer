@@ -1309,10 +1309,14 @@ a {
   font-weight: 600;
 }
 
-.admin__actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
+/* Stays a real table cell: making the <td> itself flex pulls it out of the row and breaks the alignment. */
+.admin__table td.admin__actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin__actions .button + .button {
+  margin-left: 0.5rem;
 }
 
 .chip {
