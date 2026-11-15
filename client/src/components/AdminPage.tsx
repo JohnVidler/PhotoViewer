@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { createUser, deleteUser, fetchAdminUsers, resetUserPassword, setSignupsEnabled, setUserLocked } from "../api";
 import type { AdminUser } from "../types";
 import Modal from "./Modal";
@@ -13,6 +14,10 @@ function formatDate(ms: number | null): string {
   return ms === null ? "Never" : new Date(ms).toLocaleString();
 }
 
+function statusLabel(user: AdminUser): string {
+  return user.role === "admin" ? "Administrator" : user.status === "locked" ? "Locked" : "Active";
+}
+
 export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [signups, setSignups] = useState(true);
@@ -24,6 +29,9 @@ export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
 
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null);
   const [deletePhotos, setDeletePhotos] = useState(false);
+
+  const compact = useMediaQuery("(max-width: 860px)");
+  const [detailsId, setDetailsId] = useState<number | null>(null);
 
   const [pendingReset, setPendingReset] = useState<AdminUser | null>(null);
   const [resetPassword, setResetPassword] = useState("");
@@ -80,6 +88,8 @@ export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
     setPendingReset(null);
     setResetPassword("");
   }
+
+  const detailsUser = compact && detailsId !== null ? (users?.find((user) => user.id === detailsId) ?? null) : null;
 
   return (
     <div className="page">
@@ -150,7 +160,26 @@ export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
 
         {users === null && !error && <div className="state-message">Loading…</div>}
 
-        {users !== null && (
+        {users !== null && compact && (
+          <ul className="user-list" aria-label="Users">
+            {users.map((user) => (
+              <li key={user.id}>
+                <button type="button" className="user-list__item" onClick={() => setDetailsId(user.id)}>
+                  <span className="user-list__name">
+                    <strong>{user.username}</strong>
+                    {user.displayName && <span className="admin__hint">{user.displayName}</span>}
+                  </span>
+                  <span className={`chip chip--${user.role === "admin" ? "admin" : user.status}`}>{statusLabel(user)}</span>
+                  <svg className="user-list__chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {users !== null && !compact && (
           <div className="admin__table-wrap">
             <table className="admin__table">
               <thead>
@@ -173,7 +202,7 @@ export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
                     <td>{formatDate(user.lastLoginAt)}</td>
                     <td>
                       <span className={`chip chip--${user.role === "admin" ? "admin" : user.status}`}>
-                        {user.role === "admin" ? "Administrator" : user.status === "locked" ? "Locked" : "Active"}
+                        {statusLabel(user)}
                       </span>
                     </td>
                     <td className="admin__actions">
@@ -208,6 +237,75 @@ export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
           </div>
         )}
       </main>
+
+      {detailsUser && (
+        <Modal onClose={() => setDetailsId(null)}>
+          <div className="dialog" role="dialog" aria-labelledby="user-details-title" onClick={(event) => event.stopPropagation()}>
+            <div className="user-details__head">
+              <div>
+                <h2 id="user-details-title" className="dialog__title">
+                  {detailsUser.username}
+                </h2>
+                {detailsUser.displayName && <div className="admin__hint">{detailsUser.displayName}</div>}
+              </div>
+              <span className={`chip chip--${detailsUser.role === "admin" ? "admin" : detailsUser.status}`}>
+                {statusLabel(detailsUser)}
+              </span>
+            </div>
+            <dl className="user-details__facts">
+              <div>
+                <dt>Joined</dt>
+                <dd>{formatDate(detailsUser.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>Last sign-in</dt>
+                <dd>{formatDate(detailsUser.lastLoginAt)}</dd>
+              </div>
+            </dl>
+            {detailsUser.role === "admin" ? (
+              <p className="dialog__text">Administrator accounts can't be locked, reset or deleted from here.</p>
+            ) : (
+              <div className="user-details__actions">
+                <button
+                  type="button"
+                  className="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setDetailsId(null);
+                    setPendingReset(detailsUser);
+                  }}
+                >
+                  Reset password
+                </button>
+                <button
+                  type="button"
+                  className="button"
+                  disabled={busy}
+                  onClick={() => void run(() => setUserLocked(detailsUser.id, detailsUser.status !== "locked"))}
+                >
+                  {detailsUser.status === "locked" ? "Unlock account" : "Lock account"}
+                </button>
+                <button
+                  type="button"
+                  className="button button--danger"
+                  disabled={busy}
+                  onClick={() => {
+                    setDetailsId(null);
+                    setPendingDelete(detailsUser);
+                  }}
+                >
+                  Delete account…
+                </button>
+              </div>
+            )}
+            <div className="dialog__buttons">
+              <button type="button" className="button" onClick={() => setDetailsId(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {pendingReset && (
         <Modal onClose={closeResetDialog}>

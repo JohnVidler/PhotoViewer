@@ -133,6 +133,20 @@ export interface AdminUser {
   lastLoginAt: number | null;
 }
 
+export interface AdminLink {
+  kind: "public" | "invite";
+  id: number;
+  token: string;
+  ownerUsername: string;
+  ownerLabel: string;
+  path: string;
+  canWrite: boolean;
+  createdAt: number;
+  /** Invite links only; null for public links, which have no limit. */
+  uses: number | null;
+  maxUses: number | null;
+}
+
 export interface UploadSummary {
   uploaded: number;
   skipped: { name: string; reason: string }[];

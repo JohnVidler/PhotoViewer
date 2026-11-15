@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { createInviteLink, enablePublicLink, fetchShares, removeInviteLink, removeShare, setSharePermission, shareWithUser } from "../api";
 import { baseName } from "../hooks/itemActions";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import type { ShareState } from "../types";
 import Modal from "./Modal";
 
@@ -23,6 +24,7 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
   const [username, setUsername] = useState("");
   const [canWrite, setCanWrite] = useState(false);
   const [confirmingPublic, setConfirmingPublic] = useState(false);
+  const compact = useMediaQuery("(max-width: 860px)");
   const [copied, setCopied] = useState<string | null>(null);
   const [inviteWrite, setInviteWrite] = useState(false);
   const [inviteUses, setInviteUses] = useState("5");
@@ -68,6 +70,34 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
   const usesNumber = Number(inviteUses);
   const usesValid = Number.isInteger(usesNumber) && usesNumber >= 1 && usesNumber <= 1000;
 
+  const warningBody = (
+    <>
+      <strong>Anyone with the link will be able to see this album.</strong>
+          <p>
+            Everyone who has the link, whether or not they have an account here, can see every photo in “{name}” and
+            its sub-albums, and download full-size copies, including details stored inside the photos such as where
+            they were taken. They can’t change anything.
+          </p>
+          <p>
+            Anyone you give the link to can pass it on, so only use it for photos you’re happy to make public. You can
+            switch the link off at any time, which stops it working straight away.
+          </p>
+          <div className="dialog__buttons">
+            <button type="button" className="button" onClick={() => setConfirmingPublic(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="button button--danger"
+              disabled={busy}
+              onClick={() => void run(() => enablePublicLink(path)).then(() => setConfirmingPublic(false))}
+            >
+              I understand, share publicly
+            </button>
+          </div>
+    </>
+  );
+
   const publicUrl = state?.public ? `${window.location.origin}/.public/${state.public.token}` : "";
 
   async function copyLink(url: string) {
@@ -81,7 +111,8 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
   }
 
   return (
-    <Modal onClose={onClose}>
+    // While the public-link warning is a modal of its own, Escape and the backdrop should only dismiss that one.
+    <Modal onClose={compact && confirmingPublic ? () => undefined : onClose}>
       <div
         className="dialog dialog--wide"
         role="dialog"
@@ -246,32 +277,26 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
             </>
           )}
 
-          {state && !state.public && confirmingPublic && (
+          {state && !state.public && confirmingPublic && !compact && (
             <div className="share__warning" role="alert">
-              <strong>Anyone with the link will be able to see this album.</strong>
-              <p>
-                Everyone who has the link, whether or not they have an account here, can see every photo in “{name}” and
-                its sub-albums, and download full-size copies, including details stored inside the photos such as where
-                they were taken. They can’t change anything.
-              </p>
-              <p>
-                Anyone you give the link to can pass it on, so only use it for photos you’re happy to make public. You can
-                switch the link off at any time, which stops it working straight away.
-              </p>
-              <div className="dialog__buttons">
-                <button type="button" className="button" onClick={() => setConfirmingPublic(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="button button--danger"
-                  disabled={busy}
-                  onClick={() => void run(() => enablePublicLink(path)).then(() => setConfirmingPublic(false))}
-                >
-                  I understand, share publicly
-                </button>
-              </div>
+              {warningBody}
             </div>
+          )}
+
+          {state && !state.public && confirmingPublic && compact && (
+            <Modal onClose={() => setConfirmingPublic(false)}>
+              <div
+                className="dialog"
+                role="alertdialog"
+                aria-labelledby="public-warning-title"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="public-warning-title" className="dialog__title">
+                  Share “{name}” publicly?
+                </h2>
+                <div className="share__warning share__warning--modal">{warningBody}</div>
+              </div>
+            </Modal>
           )}
 
           {state?.public && (

@@ -221,6 +221,13 @@ export default function PhotoViewer({ photos, index, onClose, onNavigate }: Phot
         }
       }}
     >
+      {/* Apart from the toolbar and in the corner, so it is a deliberate reach rather than an easy mis-tap. */}
+      <button type="button" className="viewer__button viewer__close" onClick={onClose} aria-label="Close" title="Close (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+
       <div className="viewer__toolbar">
         <a
           className="viewer__button"
@@ -245,12 +252,6 @@ export default function PhotoViewer({ photos, index, onClose, onNavigate }: Phot
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="6.5" r="1.4" fill="currentColor" />
             <path d="M10 10.5H12.25V18M10 18H14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-
-        <button type="button" className="viewer__button" onClick={onClose} aria-label="Close" title="Close">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
       </div>

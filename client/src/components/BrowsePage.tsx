@@ -218,7 +218,9 @@ export default function BrowsePage({ relPath, onOpenSidebar }: BrowsePageProps) 
   }
 
   // Sharing is for whole albums that belong to the user: not photos, not the library itself, not someone else's share.
-  const singleOwnAlbum = isOwn && selectedItems.length === 1 && selectedItems[0]!.isFolder ? selectedItems[0]! : null;
+  const singleOwnAlbum = isOwn && selectedItems.length === 1 && selectedItems[0]!.isFolder && !selectedItems[0]!.path.startsWith(".shared/")
+      ? selectedItems[0]!
+      : null;
 
   // The id of the share when this folder is inside an album someone shared with the user.
   const sharedId = scope?.kind === "shared" ? /^\.shared\/(\d+)/.exec(relPath)?.[1] : undefined;

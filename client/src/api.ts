@@ -1,4 +1,5 @@
 import type {
+  AdminLink,
   AdminUser,
   AuthStatus,
   BrowseResult,
@@ -236,6 +237,15 @@ export async function setUserLocked(id: number, locked: boolean): Promise<void> 
 
 export async function deleteUser(id: number, deletePhotos: boolean): Promise<void> {
   await sendJson(`/api/admin/users/${id}${deletePhotos ? "?deletePhotos=1" : ""}`, "DELETE");
+}
+
+export async function fetchAdminLinks(): Promise<AdminLink[]> {
+  const response = await sendJson("/api/admin/links", "GET");
+  return ((await response.json()) as { links: AdminLink[] }).links;
+}
+
+export async function deleteAdminLink(kind: AdminLink["kind"], id: number): Promise<void> {
+  await sendJson(`/api/admin/links/${kind}/${id}`, "DELETE");
 }
 
 export interface UploadItem {

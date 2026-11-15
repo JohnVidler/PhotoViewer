@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { redeemInvite } from "./api";
 import { useAuth } from "./auth";
 import AdminPage from "./components/AdminPage";
+import AdminLinksPage from "./components/AdminLinksPage";
 import AuthenticationSettings from "./components/AuthenticationSettings";
 import { ActionNotice } from "./components/DropStrips";
 import BrowsePage from "./components/BrowsePage";
@@ -86,7 +87,7 @@ function SettingsRoutes({
   onOpenSidebar: () => void;
 }) {
   switch (relPath) {
-    case `${SETTINGS_ROUTE}/authentication`:
+    case `${SETTINGS_ROUTE}/user-settings`:
       return <AuthenticationSettings onOpenSidebar={onOpenSidebar} />;
     case `${SETTINGS_ROUTE}/admin/users`:
       return isAdmin ? (
@@ -94,9 +95,15 @@ function SettingsRoutes({
       ) : (
         <div className="state-message state-message--error">You don't have access to this page.</div>
       );
+    case `${SETTINGS_ROUTE}/admin/links`:
+      return isAdmin ? (
+        <AdminLinksPage onOpenSidebar={onOpenSidebar} />
+      ) : (
+        <div className="state-message state-message--error">You don't have access to this page.</div>
+      );
     case SETTINGS_ROUTE:
     case `${SETTINGS_ROUTE}/admin`:
-      return <Navigate to={`/${SETTINGS_ROUTE}/${relPath === SETTINGS_ROUTE ? "authentication" : "admin/users"}`} replace />;
+      return <Navigate to={`/${SETTINGS_ROUTE}/${relPath === SETTINGS_ROUTE ? "user-settings" : "admin/users"}`} replace />;
     default:
       return <div className="state-message state-message--error">That settings page doesn't exist.</div>;
   }

@@ -48,7 +48,7 @@ Have a few images with different EXIF dates, a non-image file (`notes.txt`), and
 | 2.6 | A username equal to an existing folder in `photos/` (e.g. create `photos/taken` first) | "That username isn't available"; the folder is never adopted |
 | 2.7 | Sign in, delete the `pv_session` cookie in dev tools, reload | Login page |
 | 2.8 | Two browsers signed in as the same user; sign out in one | The other stays signed in |
-| 2.9 | **Settings → Authentication → Change password**: wrong current password, short new password, valid change | Errors for the first two; after a valid change every other browser/device is signed out, this one stays signed in, and the new password works |
+| 2.9 | **Settings → User Settings → Change password**: wrong current password, short new password, valid change | Errors for the first two; after a valid change every other browser/device is signed out, this one stays signed in, and the new password works |
 | 2.10 | Inspect the `users` table | `password_hash` starts `scrypt$` and never contains the password |
 | 2.11 | Inspect `sessions` | Stores a hash, not the cookie value |
 | 2.12 | Set `SESSION_DAYS=1`, edit `expires_at` into the past | Redirected to login |
@@ -59,10 +59,10 @@ Have a few images with different EXIF dates, a non-image file (`notes.txt`), and
 
 | # | Steps | Expected |
 |---|---|---|
-| 2b.1 | Sidebar footer | **Settings** is collapsed by default; clicking it expands **Authentication** and, for administrators only, **Admin → Users** |
+| 2b.1 | Sidebar footer | **Settings** is collapsed by default; clicking it expands **User Settings** and, for administrators only, **Admin → Users** |
 | 2b.2 | Open a settings page, reload | Settings group is expanded and the current page highlighted |
-| 2b.3 | Open `/.settings` and `/.settings/admin` | Redirect to Authentication and Users respectively |
-| 2b.4 | Open **Change password** (Settings → Authentication) | A dialog centred on the **whole window** over a dimmed backdrop, not clipped by the sidebar; Escape and clicking the backdrop close it; focus starts in the first field |
+| 2b.3 | Open `/.settings` and `/.settings/admin` | Redirect to User Settings and Users respectively |
+| 2b.4 | Open **Change password** (Settings → User Settings) | A dialog centred on the **whole window** over a dimmed backdrop, not clipped by the sidebar; Escape and clicking the backdrop close it; focus starts in the first field |
 | 2b.5 | Same check for the admin dialogs (Reset password, Delete) and on a narrow window | Centred over the whole window, fully visible |
 | 2b.6 | Start an upload and drag files over the page | Drop overlay and upload toast cover the window, not just the content area |
 | 2b.7 | After a successful password change | The page shows "Your password was changed." |

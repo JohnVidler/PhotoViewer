@@ -303,3 +303,90 @@ export function dropSharesUnder(ownerId: number, path: string): void {
     removeInvites.run(row.id);
   }
 }
+
+/** One link, of either kind, as the administrator sees it. */
+export interface LinkSummary {
+  kind: "public" | "invite";
+  id: number;
+  token: string;
+  ownerUsername: string;
+  ownerLabel: string;
+  path: string;
+  canWrite: boolean;
+  createdAt: number;
+  /** Invite links only: how many people have used it, and how many may. Null for public links (unlimited). */
+  uses: number | null;
+  maxUses: number | null;
+}
+
+/** Every public and invite link on the install, newest first, whoever owns it. */
+export function listAllLinks(): LinkSummary[] {
+  const db = getDb();
+  const publics = db
+    .prepare(
+      `SELECT s.id, s.token, s.path, s.can_write, s.created_at, u.username, u.display_name
+       FROM shares s JOIN users u ON u.id = s.owner_id WHERE s.token IS NOT NULL`,
+    )
+    .all() as unknown as {
+    id: number;
+    token: string;
+    path: string;
+    can_write: number;
+    created_at: number;
+    username: string;
+    display_name: string | null;
+  }[];
+  const invites = db
+    .prepare(
+      `SELECT i.id, i.token, i.path, i.can_write, i.created_at, i.uses, i.max_uses, u.username, u.display_name
+       FROM share_invites i JOIN users u ON u.id = i.owner_id`,
+    )
+    .all() as unknown as {
+    id: number;
+    token: string;
+    path: string;
+    can_write: number;
+    created_at: number;
+    uses: number;
+    max_uses: number;
+    username: string;
+    display_name: string | null;
+  }[];
+
+  const links: LinkSummary[] = [
+    ...publics.map((row): LinkSummary => ({
+      kind: "public",
+      id: row.id,
+      token: row.token,
+      ownerUsername: row.username,
+      ownerLabel: describeUser(row.display_name, row.username),
+      path: row.path,
+      canWrite: row.can_write === 1,
+      createdAt: row.created_at,
+      uses: null,
+      maxUses: null,
+    })),
+    ...invites.map((row): LinkSummary => ({
+      kind: "invite",
+      id: row.id,
+      token: row.token,
+      ownerUsername: row.username,
+      ownerLabel: describeUser(row.display_name, row.username),
+      path: row.path,
+      canWrite: row.can_write === 1,
+      createdAt: row.created_at,
+      uses: row.uses,
+      maxUses: row.max_uses,
+    })),
+  ];
+  return links.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Administrator removal of a link, regardless of owner. People who already redeemed an invite keep their access. */
+export function removeLinkAsAdmin(kind: "public" | "invite", id: number): boolean {
+  const sql =
+    kind === "public"
+      ? "DELETE FROM shares WHERE id = ? AND token IS NOT NULL"
+      : "DELETE FROM share_invites WHERE id = ?";
+  return Number(getDb().prepare(sql).run(id).changes) > 0;
+}

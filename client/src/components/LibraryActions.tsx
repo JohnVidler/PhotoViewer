@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom";
 import { createFolder, uploadFiles, type UploadItem } from "../api";
 import type { UploadSummary } from "../types";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { Portal } from "./Modal";
 
 interface LibraryActionsProps {
@@ -68,6 +69,9 @@ export default function LibraryActions({ relPath, folderLabel, onShare, onLeave,
   const [folderError, setFolderError] = useState<string | null>(null);
 
   const uploading = progress !== null;
+
+  // On phones the actions float in a bar along the bottom of the screen, within thumb's reach, rather than in the header.
+  const compact = useMediaQuery("(max-width: 860px)");
 
   const upload = useCallback(
     async (items: UploadItem[]) => {
@@ -164,6 +168,92 @@ export default function LibraryActions({ relPath, folderLabel, onShare, onLeave,
     }
   }
 
+  const folderForm = (
+      <form className="library-actions__form" onSubmit={(event) => void submitFolder(event)}>
+        <input
+          className="input"
+          value={folderName}
+          onChange={(event) => setFolderName(event.target.value)}
+          placeholder="Album name"
+          maxLength={100}
+          autoFocus
+          aria-label="New album name"
+          aria-invalid={folderError !== null}
+        />
+        <button type="submit" className="button button--primary" disabled={folderName.trim() === ""}>
+          Create
+        </button>
+        <button
+          type="button"
+          className="button"
+          onClick={() => {
+            setCreating(false);
+            setFolderError(null);
+          }}
+        >
+          Cancel
+        </button>
+        {folderError && (
+          <span className="library-actions__error" role="alert">
+            {folderError}
+          </span>
+        )}
+      </form>
+  );
+
+  const icon = (path: string) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d={path} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+
+  const actionBar = (
+    <Portal>
+      <div className="action-bar" role="toolbar" aria-label="Album actions">
+        <div className="action-bar__inner">
+          {creating ? (
+            folderForm
+          ) : (
+            <>
+              {onLeave && (
+                <button type="button" className="action-bar__item action-bar__item--danger" onClick={onLeave}>
+                  {icon("M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10")}
+                  Leave
+                </button>
+              )}
+              {!readOnly && (
+                <>
+                  {onShare && (
+                    <button type="button" className="action-bar__item" onClick={onShare}>
+                      {icon("M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7")}
+                      Share
+                    </button>
+                  )}
+                  <button type="button" className="action-bar__item" onClick={() => setCreating(true)}>
+                    {icon("M12 5v14M5 12h14")}
+                    New album
+                  </button>
+                  <button type="button" className="action-bar__item" disabled={uploading} aria-label="Upload a whole folder" onClick={() => folderInput.current?.click()}>
+                    {icon("M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z")}
+                    Add folder
+                  </button>
+                  <button type="button" className="action-bar__item action-bar__item--primary" disabled={uploading} aria-label="Upload photos" onClick={() => fileInput.current?.click()}>
+                    {icon("M12 16V4M7 9l5-5 5 5M5 20h14")}
+                    Add photos
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </Portal>
+  );
+
+  if (readOnly && compact) {
+    return onLeave ? actionBar : null;
+  }
+
   if (readOnly) {
     return onLeave ? (
       <div className="library-actions">
@@ -177,37 +267,8 @@ export default function LibraryActions({ relPath, folderLabel, onShare, onLeave,
   return (
     <>
       <div className="library-actions">
-        {creating ? (
-          <form className="library-actions__form" onSubmit={(event) => void submitFolder(event)}>
-            <input
-              className="input"
-              value={folderName}
-              onChange={(event) => setFolderName(event.target.value)}
-              placeholder="Album name"
-              maxLength={100}
-              autoFocus
-              aria-label="New album name"
-              aria-invalid={folderError !== null}
-            />
-            <button type="submit" className="button button--primary" disabled={folderName.trim() === ""}>
-              Create
-            </button>
-            <button
-              type="button"
-              className="button"
-              onClick={() => {
-                setCreating(false);
-                setFolderError(null);
-              }}
-            >
-              Cancel
-            </button>
-            {folderError && (
-              <span className="library-actions__error" role="alert">
-                {folderError}
-              </span>
-            )}
-          </form>
+        {compact ? null : creating ? (
+          folderForm
         ) : (
           <>
             {onShare && (
@@ -255,6 +316,8 @@ export default function LibraryActions({ relPath, folderLabel, onShare, onLeave,
           onChange={() => pickedFiles(folderInput.current, true)}
         />
       </div>
+
+      {compact && actionBar}
 
       {dragging && (
         <Portal>

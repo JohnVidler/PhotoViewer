@@ -1,5 +1,6 @@
 import express, { Router } from "express";
 import { passwordProblem } from "../services/passwords";
+import { listAllLinks, removeLinkAsAdmin } from "../services/shares";
 import {
   createUser,
   deleteUser,
@@ -122,4 +123,24 @@ adminRouter.delete("/users/:id", async (req, res) => {
     console.error("Failed to delete user", error);
     res.status(500).json({ error: "Failed to delete user" });
   }
+});
+
+/** Every public and invite link on the install. */
+adminRouter.get("/links", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ links: listAllLinks() });
+});
+
+adminRouter.delete("/links/:kind/:id", (req, res) => {
+  const kind = req.params["kind"];
+  const id = Number.parseInt(req.params["id"] ?? "", 10);
+  if ((kind !== "public" && kind !== "invite") || !Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid link" });
+    return;
+  }
+  if (!removeLinkAsAdmin(kind, id)) {
+    res.status(404).json({ error: "Link not found" });
+    return;
+  }
+  res.json({ ok: true });
 });

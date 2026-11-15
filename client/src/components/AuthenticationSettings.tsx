@@ -44,11 +44,11 @@ export default function AuthenticationSettings({ onOpenSidebar }: Authentication
           </svg>
         </button>
         <div className="page__heading">
-          <h1 className="page__title">Authentication</h1>
+          <h1 className="page__title">User Settings</h1>
           <nav className="breadcrumbs" aria-label="Settings path">
             <span>Settings</span>
             <span className="breadcrumbs__separator">/</span>
-            <span className="breadcrumbs__current">Authentication</span>
+            <span className="breadcrumbs__current">User Settings</span>
           </nav>
         </div>
       </header>

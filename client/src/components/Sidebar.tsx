@@ -121,6 +121,11 @@ export default function Sidebar({ currentPath, open, onClose }: SidebarProps) {
             </svg>
           </span>
           PhotoViewer
+          <button type="button" className="sidebar__close" onClick={onClose} aria-label="Close menu">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
 
         <nav className="sidebar__nav">
@@ -190,11 +195,11 @@ export default function Sidebar({ currentPath, open, onClose }: SidebarProps) {
                 <ul id="settings-tree" className="sidebar__tree">
                   <li>
                     <Link
-                      to={`/${SETTINGS_ROUTE}/authentication`}
-                      className={`sidebar__tree-link${currentPath === `${SETTINGS_ROUTE}/authentication` ? " sidebar__tree-link--active" : ""}`}
-                      aria-current={currentPath === `${SETTINGS_ROUTE}/authentication` ? "page" : undefined}
+                      to={`/${SETTINGS_ROUTE}/user-settings`}
+                      className={`sidebar__tree-link${currentPath === `${SETTINGS_ROUTE}/user-settings` ? " sidebar__tree-link--active" : ""}`}
+                      aria-current={currentPath === `${SETTINGS_ROUTE}/user-settings` ? "page" : undefined}
                     >
-                      Authentication
+                      User Settings
                     </Link>
                   </li>
                   {user.role === "admin" && (
@@ -208,6 +213,15 @@ export default function Sidebar({ currentPath, open, onClose }: SidebarProps) {
                             aria-current={currentPath === `${SETTINGS_ROUTE}/admin/users` ? "page" : undefined}
                           >
                             Users
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to={`/${SETTINGS_ROUTE}/admin/links`}
+                            className={`sidebar__tree-link${currentPath === `${SETTINGS_ROUTE}/admin/links` ? " sidebar__tree-link--active" : ""}`}
+                            aria-current={currentPath === `${SETTINGS_ROUTE}/admin/links` ? "page" : undefined}
+                          >
+                            Sharing links
                           </Link>
                         </li>
                       </ul>
