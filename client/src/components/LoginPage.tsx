@@ -1,18 +1,30 @@
 import { useState, type FormEvent } from "react";
-import { logIn, register, setupAdmin } from "../api";
+import { useEffect } from "react";
+import { fetchInvite, logIn, register, setupAdmin } from "../api";
 import { useAuth } from "../auth";
-import type { AuthStatus } from "../types";
+import type { AuthStatus, InviteInfo } from "../types";
 
 type Mode = "login" | "register";
 
 interface LoginPageProps {
   status: AuthStatus;
+  /** Set when the visitor arrived through an invite link: the album is added to their account once they're in. */
+  inviteToken?: string;
 }
 
 const MIN_PASSWORD_LENGTH = 10;
 
-export default function LoginPage({ status }: LoginPageProps) {
+export default function LoginPage({ status, inviteToken }: LoginPageProps) {
   const { refresh } = useAuth();
+  const [invite, setInvite] = useState<InviteInfo | "invalid" | null>(null);
+
+  useEffect(() => {
+    if (!inviteToken) {
+      return;
+    }
+    fetchInvite(inviteToken).then(setInvite, () => setInvite("invalid"));
+  }, [inviteToken]);
+
   const [mode, setMode] = useState<Mode>("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -82,6 +94,20 @@ export default function LoginPage({ status }: LoginPageProps) {
           </svg>
         </span>
         <h1 className="auth-card__title">{heading}</h1>
+        {invite && invite !== "invalid" && (
+          <p className="auth-card__note auth-card__invite">
+            {invite.available
+              ? `${invite.ownerName} has invited you to the album “${invite.albumName}”. ${
+                  setup ? "" : "Sign in or create an account and it will be added to your Shared With Me list."
+                }`
+              : `The invite to “${invite.albumName}” has already been used the maximum number of times.`}
+          </p>
+        )}
+        {invite === "invalid" && (
+          <p className="auth-card__error" role="alert">
+            This invite link isn't valid. It may have been switched off.
+          </p>
+        )}
         <p className="auth-card__blurb">{blurb}</p>
 
         <div className="auth-form">

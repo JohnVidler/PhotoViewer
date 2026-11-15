@@ -4,6 +4,7 @@ import type {
   BrowseResult,
   CopyResult,
   DeleteResult,
+  InviteInfo,
   MoveResult,
   PhotoInfo,
   SharedFolder,
@@ -166,12 +167,43 @@ export async function enablePublicLink(path: string): Promise<{ id: number; toke
   return (await response.json()) as { id: number; token: string };
 }
 
+export async function createInviteLink(path: string, canWrite: boolean, maxUses: number): Promise<void> {
+  await sendJson("/api/shares/invites", "POST", { path, canWrite, maxUses });
+}
+
+export async function removeInviteLink(id: number): Promise<void> {
+  await sendJson(`/api/shares/invites/${id}`, "DELETE");
+}
+
+export async function fetchInvite(token: string): Promise<InviteInfo> {
+  const response = await sendJson(`/api/invites/${encodeURIComponent(token)}`, "GET");
+  return (await response.json()) as InviteInfo;
+}
+
+/** Adds the invited album to the signed-in user's account; returns where it now lives in the client's paths. */
+export async function redeemInvite(token: string): Promise<string> {
+  const response = await sendJson(`/api/invites/${encodeURIComponent(token)}/redeem`, "POST");
+  const { path } = (await response.json()) as { path: string };
+  window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
+  return path;
+}
+
+/** Sets the signed-in user's display name; an empty string clears it. */
+export async function setDisplayName(displayName: string): Promise<void> {
+  await sendJson("/api/auth/profile", "PUT", { displayName });
+}
+
 export function deleteItems(paths: string[]): Promise<DeleteResult> {
   return changeItems<DeleteResult>("/api/delete", { paths });
 }
 
 export async function renameItem(path: string, name: string): Promise<string> {
   return (await changeItems<{ path: string }>("/api/rename", { path, name })).path;
+}
+
+export async function setAlbumDescription(path: string, description: string): Promise<void> {
+  await sendJson("/api/description", "PUT", { path, description });
+  window.dispatchEvent(new Event(ITEMS_CHANGED_EVENT));
 }
 
 export async function createFolder(parentPath: string, name: string): Promise<string> {

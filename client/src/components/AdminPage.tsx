@@ -167,6 +167,7 @@ export default function AdminPage({ onOpenSidebar }: AdminPageProps) {
                   <tr key={user.id}>
                     <td>
                       <div className="admin__name">{user.username}</div>
+                      {user.displayName && <div className="admin__hint">{user.displayName}</div>}
                     </td>
                     <td>{formatDate(user.createdAt)}</td>
                     <td>{formatDate(user.lastLoginAt)}</td>

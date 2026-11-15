@@ -218,8 +218,11 @@ export default function Sidebar({ currentPath, open, onClose }: SidebarProps) {
             </div>
 
             <div className="sidebar__user">
-              <span className="sidebar__user-name">{user.username}</span>
-              <span className="sidebar__user-email">{user.role === "admin" ? "Administrator" : "Member"}</span>
+              <span className="sidebar__user-name">{user.displayName ?? user.username}</span>
+              <span className="sidebar__user-email">
+                {user.displayName ? `@${user.username} · ` : ""}
+                {user.role === "admin" ? "Administrator" : "Member"}
+              </span>
             </div>
             <button type="button" className="button" onClick={() => void signOut()}>
               Sign out

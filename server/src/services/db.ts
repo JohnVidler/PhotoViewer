@@ -56,6 +56,28 @@ export function getDb(): DatabaseSync {
     CREATE UNIQUE INDEX IF NOT EXISTS shares_one_per_user ON shares (owner_id, path, grantee_id) WHERE grantee_id IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS shares_one_public ON shares (owner_id, path) WHERE token IS NOT NULL;
 
+    -- Invite links: whoever opens one (after signing in or creating an account) gets a normal share with
+    -- them as grantee. A link works for at most max_uses new people, then stops creating shares.
+    CREATE TABLE IF NOT EXISTS share_invites (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      path       TEXT NOT NULL CHECK (path <> ''),
+      token      TEXT NOT NULL UNIQUE,
+      can_write  INTEGER NOT NULL DEFAULT 0,
+      max_uses   INTEGER NOT NULL CHECK (max_uses >= 1),
+      uses       INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+
+    -- Optional free-text description of an album, shown at the top of it. Keyed by the album's path in the
+    -- owner's library; it follows the folder when it is renamed or moved and is removed when it is deleted.
+    CREATE TABLE IF NOT EXISTS album_descriptions (
+      owner_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      path        TEXT NOT NULL CHECK (path <> ''),
+      description TEXT NOT NULL,
+      PRIMARY KEY (owner_id, path)
+    );
+
     -- Only a hash of the session token is stored, so a leaked database can't be replayed as cookies.
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY,
@@ -64,6 +86,11 @@ export function getDb(): DatabaseSync {
       expires_at INTEGER NOT NULL
     );
   `);
+
+  // Display names were added after the first release.
+  if (!(db.prepare("PRAGMA table_info(users)").all() as { name: string }[]).some((c) => c.name === "display_name")) {
+    db.exec("ALTER TABLE users ADD COLUMN display_name TEXT");
+  }
 
   database = db;
   return db;

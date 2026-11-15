@@ -28,6 +28,8 @@ export interface BrowseResult {
   parentPath: string | null;
   folders: FolderEntry[];
   photos: PhotoEntry[];
+  /** The album's description, if it has one. */
+  description?: string;
   /** Present when the folder belongs to somebody else's share or a public link rather than the visitor's own library. */
   scope?: ShareScope;
 }

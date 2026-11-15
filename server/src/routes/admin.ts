@@ -22,6 +22,7 @@ adminRouter.get("/users", (_req, res) => {
     users: listUsers().map((user) => ({
       id: user.id,
       username: user.username,
+      displayName: user.displayName,
       role: user.role,
       status: user.status,
       createdAt: user.createdAt,

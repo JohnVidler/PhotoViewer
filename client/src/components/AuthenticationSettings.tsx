@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { setDisplayName } from "../api";
 import { useAuth } from "../auth";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 
@@ -7,10 +8,32 @@ interface AuthenticationSettingsProps {
 }
 
 export default function AuthenticationSettings({ onOpenSidebar }: AuthenticationSettingsProps) {
-  const { status } = useAuth();
+  const { status, refresh } = useAuth();
   const user = status?.user ?? null;
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [changed, setChanged] = useState(false);
+  const [name, setName] = useState<string | null>(null);
+  const [nameMessage, setNameMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [savingName, setSavingName] = useState(false);
+
+  // Edits live in `name` until saved; until the first edit the box shows the saved value.
+  const nameValue = name ?? user?.displayName ?? "";
+
+  async function saveName(event: FormEvent) {
+    event.preventDefault();
+    setSavingName(true);
+    setNameMessage(null);
+    try {
+      await setDisplayName(nameValue);
+      await refresh();
+      setName(null);
+      setNameMessage({ text: nameValue.trim() === "" ? "Your display name was removed." : "Your display name was saved.", error: false });
+    } catch (failure) {
+      setNameMessage({ text: failure instanceof Error ? failure.message : "That didn't work.", error: true });
+    } finally {
+      setSavingName(false);
+    }
+  }
 
   return (
     <div className="page">
@@ -35,12 +58,45 @@ export default function AuthenticationSettings({ onOpenSidebar }: Authentication
           <section className="admin__card settings-card">
             <div className="settings-card__row">
               <div>
-                <strong>Signed in as {user.username}</strong>
-                <span className="admin__hint">{user.role === "admin" ? "Administrator" : "Member"}</span>
+                <strong>Signed in as {user.displayName ?? user.username}</strong>
+                <span className="admin__hint">
+                  {user.displayName ? `@${user.username} · ` : ""}
+                  {user.role === "admin" ? "Administrator" : "Member"}
+                </span>
               </div>
             </div>
           </section>
         )}
+
+        <section className="admin__card settings-card">
+          <form className="settings-card__row" onSubmit={(event) => void saveName(event)}>
+            <div>
+              <strong>Display name</strong>
+              <span className="admin__hint">
+                Shown to people you share albums with, next to your username. Leave it empty to show just your username.
+              </span>
+              {nameMessage && (
+                <span className={nameMessage.error ? "auth-card__error" : "settings-card__success"} role={nameMessage.error ? "alert" : "status"}>
+                  {nameMessage.text}
+                </span>
+              )}
+            </div>
+            <div className="share__row">
+              <input
+                className="input"
+                value={nameValue}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={user?.username ?? "Display name"}
+                aria-label="Display name"
+                maxLength={50}
+                autoComplete="nickname"
+              />
+              <button type="submit" className="button" disabled={savingName || nameValue.trim() === (user?.displayName ?? "")}>
+                Save
+              </button>
+            </div>
+          </form>
+        </section>
 
         <section className="admin__card settings-card">
           <div className="settings-card__row">

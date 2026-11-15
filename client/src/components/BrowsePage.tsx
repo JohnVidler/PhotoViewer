@@ -7,6 +7,7 @@ import { useBrowse } from "../hooks/useBrowse";
 import { useSharedWithMe } from "../hooks/useSharedWithMe";
 import type { FolderEntry } from "../types";
 import { dayKey, photoDateMs } from "../utils";
+import AlbumDescription from "./AlbumDescription";
 import Breadcrumbs from "./Breadcrumbs";
 import { ParentDropZone } from "./DropStrips";
 import FolderGrid from "./FolderGrid";
@@ -267,6 +268,9 @@ export default function BrowsePage({ relPath, onOpenSidebar }: BrowsePageProps) 
 
       <main>
         {canModify && relPath !== tree && <ParentDropZone relPath={relPath} rootLabel={rootLabel} />}
+        {data && relPath !== "" && (
+          <AlbumDescription key={relPath} path={relPath} description={data.description} editable={canModify} />
+        )}
         {body}
       </main>
 

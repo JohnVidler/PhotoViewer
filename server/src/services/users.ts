@@ -13,6 +13,8 @@ export interface UserRecord {
   id: number;
   /** Lowercase; also the name of this user's folder inside the photos directory. */
   username: string;
+  /** Optional friendly name shown to other people. Purely cosmetic: it is never used to identify or locate anyone. */
+  displayName: string | null;
   role: UserRole;
   status: UserStatus;
   createdAt: number;
@@ -22,18 +24,20 @@ export interface UserRecord {
 interface UserRow {
   id: number;
   username: string;
+  display_name: string | null;
   role: UserRole;
   status: UserStatus;
   created_at: number;
   last_login_at: number | null;
 }
 
-const USER_COLUMNS = "id, username, role, status, created_at, last_login_at";
+const USER_COLUMNS = "id, username, display_name, role, status, created_at, last_login_at";
 
 function toUser(row: UserRow): UserRecord {
   return {
     id: row.id,
     username: row.username,
+    displayName: row.display_name,
     role: row.role,
     status: row.status,
     createdAt: row.created_at,
@@ -51,6 +55,39 @@ export function getUserByUsername(raw: string): UserRecord | null {
     .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE username = ?`)
     .get(raw.trim().toLowerCase()) as UserRow | undefined;
   return row ? toUser(row) : null;
+}
+
+/**
+ * How a person is named to other people. When they've chosen a display name the username is shown too, so a
+ * display name can never be used to pass yourself off as someone else.
+ */
+export function describeUser(displayName: string | null, username: string): string {
+  return displayName ? `${displayName} (@${username})` : username;
+}
+
+export const MAX_DISPLAY_NAME_LENGTH = 50;
+
+/** Returns the cleaned name (null for "none"), or a message explaining what is wrong with it. */
+export function checkDisplayName(raw: unknown): { ok: true; displayName: string | null } | { ok: false; error: string } {
+  if (raw === null || raw === undefined) {
+    return { ok: true, displayName: null };
+  }
+  if (typeof raw !== "string") {
+    return { ok: false, error: "Display name must be text." };
+  }
+
+  const cleaned = raw.normalize("NFC").replace(/\s+/g, " ").trim();
+  if (/\p{C}/u.test(cleaned)) {
+    return { ok: false, error: "Display name can't contain control or invisible characters." };
+  }
+  if ([...cleaned].length > MAX_DISPLAY_NAME_LENGTH) {
+    return { ok: false, error: `Display name can be at most ${MAX_DISPLAY_NAME_LENGTH} characters.` };
+  }
+  return { ok: true, displayName: cleaned === "" ? null : cleaned };
+}
+
+export function setDisplayName(userId: number, displayName: string | null): void {
+  getDb().prepare("UPDATE users SET display_name = ? WHERE id = ?").run(displayName, userId);
 }
 
 export function countUsers(): number {

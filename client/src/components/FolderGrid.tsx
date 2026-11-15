@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { createFolder, thumbnailUrl } from "../api";
+import { useLongPress } from "../hooks/useLongPress";
 import { useMoveDrop } from "../hooks/itemActions";
 import type { FolderEntry, PhotoPreview } from "../types";
 import FolderIcon from "./FolderIcon";
@@ -81,6 +82,7 @@ function FolderTile({ folder, selected, selecting, editable, onToggle }: FolderT
   // with the user is a drop target only if they may edit it.
   const droppable = folder.writable ?? editable;
   const { over, active, dropProps } = useMoveDrop(folder.path, folder.name, droppable);
+  const longPress = useLongPress(editable && !selecting ? () => onToggle(folder.path) : undefined);
 
   return (
     <div
@@ -90,7 +92,13 @@ function FolderTile({ folder, selected, selecting, editable, onToggle }: FolderT
         to={`/${folder.path}`}
         className="folder-card"
         draggable={false}
+        {...longPress.handlers}
         onClick={(event) => {
+          // The release at the end of a long-press (which just ticked the album) must not open it.
+          if (longPress.consumeLongPress()) {
+            event.preventDefault();
+            return;
+          }
           // While ticking things, clicking an album ticks it rather than opening it.
           if (selecting && editable) {
             event.preventDefault();

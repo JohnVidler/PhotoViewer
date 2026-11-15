@@ -6,10 +6,12 @@ import { createSession, destroySession, userFromRequest } from "../services/sess
 import { setupCodeMatches } from "../services/setupCode";
 import {
   authenticate,
+  checkDisplayName,
   checkPassword,
   countUsers,
   createUser,
   ensureUserRoot,
+  setDisplayName,
   setPassword,
   signupsEnabled,
   type UserRecord,
@@ -21,7 +23,7 @@ export const authRouter = Router();
 const parseJson = express.json({ limit: "10kb" });
 
 function publicUser(user: UserRecord) {
-  return { id: user.id, username: user.username, role: user.role };
+  return { id: user.id, username: user.username, displayName: user.displayName, role: user.role };
 }
 
 function clientIp(req: Request): string {
@@ -167,4 +169,16 @@ authRouter.post("/password", requireUser, parseJson, async (req, res) => {
   await setPassword(user.id, newPassword);
   createSession(res, user);
   res.json({ ok: true });
+});
+
+/** Sets (or, with an empty value, clears) the signed-in user's display name. */
+authRouter.put("/profile", requireUser, parseJson, (req, res) => {
+  const checked = checkDisplayName((req.body as { displayName?: unknown }).displayName);
+  if (!checked.ok) {
+    res.status(400).json({ error: checked.error });
+    return;
+  }
+
+  setDisplayName(req.user!.id, checked.displayName);
+  res.json({ user: publicUser({ ...req.user!, displayName: checked.displayName }) });
 });

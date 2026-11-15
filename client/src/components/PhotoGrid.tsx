@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { touchPrimary, useLongPress } from "../hooks/useLongPress";
 import { beginDrag, endDrag, useDragged } from "../hooks/itemActions";
 import { thumbnailUrl } from "../api";
 import { dayKey, formatDate, formatDayLabel, photoDateMs, stripExtension } from "../utils";
@@ -37,12 +38,22 @@ interface PhotoTileProps {
 function PhotoTile({ photo, index, selected, selecting, selectable, draggable, dragPayload, onOpen, onToggle }: PhotoTileProps) {
   const dragged = useDragged();
   const dragging = dragged.includes(photo.path);
-  const activate = () => (selecting && selectable ? onToggle(photo.path) : onOpen(index));
+  const longPress = useLongPress(selectable && !selecting ? () => onToggle(photo.path) : undefined);
+  const activate = () => {
+    if (longPress.consumeLongPress()) {
+      return;
+    }
+    if (selecting && selectable) {
+      onToggle(photo.path);
+    } else {
+      onOpen(index);
+    }
+  };
 
   return (
     <div
       className={`photo-tile${selected ? " photo-tile--selected" : ""}${selecting ? " photo-tile--selecting" : ""}${dragging ? " photo-tile--dragging" : ""}`}
-      draggable={draggable}
+      draggable={draggable && !touchPrimary}
       onDragStart={draggable ? (event) => beginDrag(event, dragPayload(photo.path)) : undefined}
       onDragEnd={draggable ? endDrag : undefined}
     >
@@ -51,6 +62,7 @@ function PhotoTile({ photo, index, selected, selecting, selectable, draggable, d
         role="button"
         tabIndex={0}
         className="photo-card"
+        {...longPress.handlers}
         onClick={activate}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {

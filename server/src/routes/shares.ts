@@ -4,6 +4,11 @@ import { resolveScope, rootForShare, sendScopeError } from "../services/access";
 import { describeFolder } from "../services/fileScanner";
 import { resolvePhotoPath } from "../services/paths";
 import {
+  createInvite,
+  DEFAULT_INVITE_USES,
+  listInvitesForPath,
+  MAX_INVITE_USES,
+  removeInvite,
   enablePublicShare,
   listSharedWithUser,
   leaveShare,
@@ -64,7 +69,7 @@ sharesRouter.get("/shared", async (req, res) => {
         path: displayPath,
         photoCount,
         previews,
-        ownerName: share.ownerUsername,
+        ownerName: share.ownerLabel,
         canWrite: share.canWrite,
       });
     }
@@ -96,7 +101,14 @@ sharesRouter.get("/shares", async (req, res) => {
     res.json({
       users: shares
         .filter((share) => share.granteeId !== null)
-        .map((share) => ({ id: share.id, username: share.granteeUsername, canWrite: share.canWrite })),
+        .map((share) => ({ id: share.id, username: share.granteeUsername, label: share.granteeLabel, canWrite: share.canWrite })),
+      invites: listInvitesForPath(ownerId, relPath).map((invite) => ({
+        id: invite.id,
+        token: invite.token,
+        canWrite: invite.canWrite,
+        maxUses: invite.maxUses,
+        uses: invite.uses,
+      })),
       public: publicShare ? { id: publicShare.id, token: publicShare.token } : null,
     });
   } catch (error) {
@@ -161,4 +173,32 @@ sharesRouter.post("/shares/public", async (req, res) => {
   } catch (error) {
     fail(res, error, "create public link");
   }
+});
+
+/** POST /api/shares/invites  { path, canWrite, maxUses }  creates a link that adds the album to the accounts of the first `maxUses` people who use it. */
+sharesRouter.post("/shares/invites", async (req, res) => {
+  try {
+    const body = req.body as { path?: unknown; canWrite?: unknown; maxUses?: unknown };
+    const { relPath, ownerId } = await ownAlbum(req, body.path);
+
+    const maxUses = body.maxUses === undefined ? DEFAULT_INVITE_USES : body.maxUses;
+    if (typeof maxUses !== "number" || !Number.isInteger(maxUses) || maxUses < 1 || maxUses > MAX_INVITE_USES) {
+      throw new ShareError(`Choose a number of uses between 1 and ${MAX_INVITE_USES}.`);
+    }
+
+    const invite = createInvite(ownerId, relPath, body.canWrite === true, maxUses);
+    res.status(201).json({ id: invite.id, token: invite.token });
+  } catch (error) {
+    fail(res, error, "create invite link");
+  }
+});
+
+/** DELETE /api/shares/invites/:id  owner-only: switches the link off. People who already used it keep their access. */
+sharesRouter.delete("/shares/invites/:id", (req, res) => {
+  const id = Number.parseInt(req.params["id"] ?? "", 10);
+  if (!Number.isInteger(id) || !removeInvite(req.user!.id, id)) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.json({ ok: true });
 });

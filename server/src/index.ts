@@ -7,6 +7,7 @@ import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
 import { browseRouter } from "./routes/browse";
 import { eventsRouter } from "./routes/events";
+import { invitesRouter } from "./routes/invites";
 import { infoRouter } from "./routes/info";
 import { itemsRouter } from "./routes/items";
 import { photoRouter } from "./routes/photo";
@@ -39,6 +40,8 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api", rejectForeignOrigin);
 app.use("/api/auth", authRouter);
+// Invite links: looking one up is anonymous; redeeming it requires an account (checked in the router).
+app.use("/api/invites", invitesRouter);
 
 // Viewing endpoints also serve public links to anonymous visitors. Each one decides from the path whether the
 // visitor may see it (own library and shared albums need an account; a public link's token is the credential).

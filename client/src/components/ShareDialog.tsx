@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { enablePublicLink, fetchShares, removeShare, setSharePermission, shareWithUser } from "../api";
+import { createInviteLink, enablePublicLink, fetchShares, removeInviteLink, removeShare, setSharePermission, shareWithUser } from "../api";
 import { baseName } from "../hooks/itemActions";
 import type { ShareState } from "../types";
 import Modal from "./Modal";
@@ -23,7 +23,9 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
   const [username, setUsername] = useState("");
   const [canWrite, setCanWrite] = useState(false);
   const [confirmingPublic, setConfirmingPublic] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [inviteWrite, setInviteWrite] = useState(false);
+  const [inviteUses, setInviteUses] = useState("5");
 
   const name = baseName(path);
 
@@ -63,13 +65,16 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
     }
   }
 
+  const usesNumber = Number(inviteUses);
+  const usesValid = Number.isInteger(usesNumber) && usesNumber >= 1 && usesNumber <= 1000;
+
   const publicUrl = state?.public ? `${window.location.origin}/.public/${state.public.token}` : "";
 
-  async function copyLink() {
+  async function copyLink(url: string) {
     try {
-      await navigator.clipboard.writeText(publicUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(url);
+      setCopied(url);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
       // Clipboard access can be blocked (plain HTTP, permissions); the link is selectable in the box instead.
     }
@@ -106,12 +111,12 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
           {state && state.users.length === 0 && <p className="admin__hint">Not shared with anyone yet.</p>}
           {state?.users.map((person) => (
             <div key={person.id} className="share__row">
-              <span className="share__who">{person.username}</span>
+              <span className="share__who">{person.label}</span>
               <select
                 className="input share__select"
                 value={person.canWrite ? "write" : "read"}
                 disabled={busy}
-                aria-label={`What ${person.username} can do`}
+                aria-label={`What ${person.label} can do`}
                 onChange={(event) => void run(() => setSharePermission(person.id, event.target.value === "write"))}
               >
                 <option value="read">Can view</option>
@@ -152,6 +157,77 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
             <strong>Can edit</strong>: also upload, create albums, and move, rename and delete things in this album. Only
             you can change these settings.
           </p>
+        </section>
+
+        <section className="share__section" aria-labelledby="share-invite">
+          <h3 id="share-invite" className="share__heading">
+            Invite link
+          </h3>
+          <p className="admin__hint">
+            Whoever opens the link signs in or creates an account, and the album is added to that account. The link
+            stops working once it has been used the number of times you choose.
+          </p>
+
+          {state?.invites.map((invite) => {
+            const url = `${window.location.origin}/.invite/${invite.token}`;
+            const used = invite.uses >= invite.maxUses;
+            return (
+              <div key={invite.id} className="share__invite">
+                <div className="share__row">
+                  <input
+                    className="input share__who"
+                    value={url}
+                    readOnly
+                    aria-label="Invite link"
+                    onFocus={(event) => event.target.select()}
+                  />
+                  <button type="button" className="button" onClick={() => void copyLink(url)}>
+                    {copied === url ? "Copied" : "Copy"}
+                  </button>
+                  <button type="button" className="button button--danger" disabled={busy} onClick={() => void run(() => removeInviteLink(invite.id))}>
+                    Delete
+                  </button>
+                </div>
+                <p className="admin__hint">
+                  {invite.canWrite ? "Can edit" : "Can view"} · {invite.uses} of {invite.maxUses} uses
+                  {used ? " · used up, no new people can join" : ""}
+                </p>
+              </div>
+            );
+          })}
+
+          <form
+            className="share__row share__add"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(() => createInviteLink(path, inviteWrite, usesNumber));
+            }}
+          >
+            <input
+              className="input share__select"
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              value={inviteUses}
+              onChange={(event) => setInviteUses(event.target.value)}
+              aria-label="How many times the link can be used"
+              style={{ width: "5.5rem" }}
+            />
+            <span className="admin__hint">uses</span>
+            <select
+              className="input share__select"
+              value={inviteWrite ? "write" : "read"}
+              aria-label="What people who use the link can do"
+              onChange={(event) => setInviteWrite(event.target.value === "write")}
+            >
+              <option value="read">Can view</option>
+              <option value="write">Can edit</option>
+            </select>
+            <button type="submit" className="button button--primary" disabled={busy || !usesValid}>
+              Create invite link
+            </button>
+          </form>
         </section>
 
         <section className="share__section" aria-labelledby="share-public">
@@ -211,8 +287,8 @@ export default function ShareDialog({ path, onClose }: ShareDialogProps) {
                   aria-label="Public link"
                   onFocus={(event) => event.target.select()}
                 />
-                <button type="button" className="button" onClick={() => void copyLink()}>
-                  {copied ? "Copied" : "Copy"}
+                <button type="button" className="button" onClick={() => void copyLink(publicUrl)}>
+                  {copied === publicUrl ? "Copied" : "Copy"}
                 </button>
               </div>
               <div>

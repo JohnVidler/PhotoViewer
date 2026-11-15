@@ -32,6 +32,8 @@ export interface BrowseResult {
   parentPath: string | null;
   folders: FolderEntry[];
   photos: PhotoEntry[];
+  /** The album's description, if it has one. */
+  description?: string;
   /** Present when this folder belongs to someone else's share or a public link rather than the user's own library. */
   scope?: ShareScope;
 }
@@ -57,8 +59,18 @@ export interface SharedFolder {
 
 /** Who one of the user's own albums is shared with. */
 export interface ShareState {
-  users: { id: number; username: string; canWrite: boolean }[];
+  users: { id: number; username: string; label: string; canWrite: boolean }[];
   public: { id: number; token: string } | null;
+  invites: { id: number; token: string; canWrite: boolean; maxUses: number; uses: number }[];
+}
+
+/** What an invite link offers, shown before the visitor signs in. */
+export interface InviteInfo {
+  albumName: string;
+  ownerName: string;
+  canWrite: boolean;
+  /** False once the link has been used the maximum number of times. */
+  available: boolean;
 }
 
 export interface PhotoInfo {
@@ -100,6 +112,7 @@ export interface PhotoInfo {
 export interface AuthUser {
   id: number;
   username: string;
+  displayName: string | null;
   role: "admin" | "user";
 }
 
@@ -113,6 +126,7 @@ export interface AuthStatus {
 export interface AdminUser {
   id: number;
   username: string;
+  displayName: string | null;
   role: "admin" | "user";
   status: "active" | "locked";
   createdAt: number;

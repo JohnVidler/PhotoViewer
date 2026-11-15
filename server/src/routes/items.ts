@@ -1,5 +1,7 @@
 import express, { Router } from "express";
 import { ownerPath, requireWrite, resolveScope, sendScopeError, type Scope } from "../services/access";
+import { resolvePhotoPath } from "../services/paths";
+import { dropDescriptionsUnder, followMovedDescription, MAX_DESCRIPTION_LENGTH, setAlbumDescription } from "../services/albumDescriptions";
 import { copyPhotos, deleteItems, ItemError, moveItems, renameItem } from "../services/items";
 import { dropSharesUnder, followMovedPath } from "../services/shares";
 import type { UserRecord } from "../services/users";
@@ -60,6 +62,7 @@ itemsRouter.post("/move", async (req, res) => {
     // Shares point at folders by path, so a moved shared folder takes its shares with it.
     for (const move of result.moved) {
       followMovedPath(target.ownerId, ownerPath(target, move.from), ownerPath(target, move.to));
+      followMovedDescription(target.ownerId, ownerPath(target, move.from), ownerPath(target, move.to));
     }
     res.json(result);
   } catch (error) {
@@ -108,6 +111,7 @@ itemsRouter.post("/delete", async (req, res) => {
     // A deleted shared folder must not leave a share behind that a new folder of the same name would inherit.
     for (const deleted of result.deleted) {
       dropSharesUnder(scope.ownerId, ownerPath(scope, deleted));
+      dropDescriptionsUnder(scope.ownerId, ownerPath(scope, deleted));
     }
     res.json(result);
   } catch (error) {
@@ -129,8 +133,36 @@ itemsRouter.post("/rename", async (req, res) => {
 
     const renamed = await renameItem(scope.root, scope.relPath, name);
     followMovedPath(scope.ownerId, ownerPath(scope, scope.relPath), ownerPath(scope, renamed));
+    followMovedDescription(scope.ownerId, ownerPath(scope, scope.relPath), ownerPath(scope, renamed));
     res.json({ path: scope.root.prefix + renamed });
   } catch (error) {
     fail(res, error, "rename item");
+  }
+});
+
+/** PUT /api/description  { path, description }  sets (or, if empty, clears) an album's description. */
+itemsRouter.put("/description", async (req, res) => {
+  const { path, description } = req.body as { path?: unknown; description?: unknown };
+  if (typeof path !== "string" || typeof description !== "string") {
+    res.status(400).json({ error: "path and description (strings) are required" });
+    return;
+  }
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    res.status(400).json({ error: `Descriptions can be at most ${MAX_DESCRIPTION_LENGTH} characters.` });
+    return;
+  }
+
+  try {
+    const scope = await resolveScope(req.user!, path);
+    requireWrite(scope);
+    const albumPath = ownerPath(scope, scope.relPath);
+    if (albumPath === "") {
+      throw new ItemError("Choose an album to describe.");
+    }
+    await resolvePhotoPath(scope.root, scope.relPath); // must exist inside the tree
+    setAlbumDescription(scope.ownerId, albumPath, description);
+    res.json({ description: description.trim() });
+  } catch (error) {
+    fail(res, error, "save description");
   }
 });

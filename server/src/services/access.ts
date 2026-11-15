@@ -94,7 +94,7 @@ export async function resolveScope(user: UserRecord | null, rawPath: string): Pr
       canWrite: head === ".shared" && share.canWrite,
       ownerId: share.ownerId,
       basePath: share.path,
-      info: { name: path.posix.basename(share.path), ownerName: share.ownerUsername },
+      info: { name: path.posix.basename(share.path), ownerName: share.ownerLabel },
     };
   }
 

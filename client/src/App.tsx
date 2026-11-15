@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { redeemInvite } from "./api";
 import { useAuth } from "./auth";
 import AdminPage from "./components/AdminPage";
 import AuthenticationSettings from "./components/AuthenticationSettings";
@@ -13,6 +14,7 @@ export default function App() {
   const location = useLocation();
   const current = decodeURIComponent(location.pathname.replace(/^\/+/, "")).replace(/\/+$/, "");
   const publicPath = current.startsWith(".public/") ? current : null;
+  const inviteToken = current.startsWith(".invite/") ? current.slice(".invite/".length).split("/")[0] || null : null;
 
   if (error && !status) {
     return (
@@ -33,7 +35,14 @@ export default function App() {
 
   if (!status.user) {
     // Public links work without an account; everything else asks for sign-in.
-    return publicPath ? <PublicView relPath={publicPath} /> : <LoginPage status={status} />;
+    if (publicPath) {
+      return <PublicView relPath={publicPath} />;
+    }
+    return inviteToken ? <LoginPage status={status} inviteToken={inviteToken} /> : <LoginPage status={status} />;
+  }
+
+  if (inviteToken) {
+    return <InviteRedeem token={inviteToken} />;
   }
 
   return <Library isAdmin={status.user.role === "admin"} />;
@@ -118,4 +127,37 @@ function PublicView({ relPath }: { relPath: string }) {
       <ActionNotice />
     </div>
   );
+}
+
+/** Opening an invite link while signed in: adds the album to the account, then goes straight to it. */
+function InviteRedeem({ token }: { token: string }) {
+  const [destination, setDestination] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    redeemInvite(token).then(setDestination, (failure: unknown) =>
+      setError(failure instanceof Error ? failure.message : "Could not use this invite link."),
+    );
+  }, [token]);
+
+  if (destination) {
+    return <Navigate to={`/${destination}`} replace />;
+  }
+
+  if (error) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <p className="auth-card__error" role="alert">
+            {error}
+          </p>
+          <a className="button button--primary" href="/">
+            Go to my library
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="state-message">Adding the album to your account…</div>;
 }

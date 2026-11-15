@@ -594,6 +594,8 @@ a {
   background: rgba(6, 7, 10, 0.92);
   backdrop-filter: blur(20px);
   animation: viewer-fade-in 0.15s ease;
+  /* We handle pinch/pan on the image ourselves, so the browser must not zoom the whole page */
+  touch-action: none;
 }
 
 @keyframes viewer-fade-in {
@@ -611,8 +613,11 @@ a {
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: var(--radius-lg);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  will-change: transform;
 }
 
 .viewer__toolbar {
@@ -1570,11 +1575,17 @@ a {
   height: 16px;
 }
 
-/* Appears on hover, on keyboard focus, and everywhere once something is ticked (and always on touch screens). */
-.photo-tile:hover .select-box,
-.folder-tile:hover .select-box,
-.photo-tile:focus-within .select-box,
-.folder-tile:focus-within .select-box,
+/* Appears on hover and keyboard focus (mouse devices), and everywhere once something is ticked. On touch screens
+   it only appears in selection mode, which a long-press starts. */
+@media (hover: hover) {
+  .photo-tile:hover .select-box,
+  .folder-tile:hover .select-box,
+  .photo-tile:focus-within .select-box,
+  .folder-tile:focus-within .select-box {
+    opacity: 1;
+  }
+}
+
 .photo-tile--selecting .select-box,
 .folder-tile--selecting .select-box,
 .select-box[aria-checked="true"] {
@@ -1582,8 +1593,11 @@ a {
 }
 
 @media (hover: none) {
-  .select-box {
-    opacity: 1;
+  .photo-card,
+  .folder-card {
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
 }
 
@@ -2007,6 +2021,22 @@ span.share__who {
   text-overflow: ellipsis;
 }
 
+.share__invite {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.share__invite .admin__hint {
+  margin: 0;
+}
+
+.auth-card__invite {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 .share__add {
   margin-top: 0.25rem;
 }
@@ -2059,4 +2089,110 @@ span.share__who {
 
 .public-layout__content {
   container-type: inline-size;
+}
+
+/* Album description */
+
+.album-description {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0 0 1.25rem;
+  max-width: 48rem;
+}
+
+.album-description__text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.album-description__edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.album-description__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--color-text-muted);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.album-description__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Phones: the viewer's controls become a larger floating action bar along the bottom edge */
+@media (max-width: 600px) {
+  .viewer {
+    padding: calc(3.5rem + env(safe-area-inset-top)) 0.75rem calc(6.5rem + env(safe-area-inset-bottom));
+  }
+
+  .viewer__toolbar {
+    top: auto;
+    right: auto;
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 0.5rem;
+    padding: 0.45rem;
+    background: rgba(24, 27, 34, 0.78);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  }
+
+  .viewer__toolbar .viewer__button {
+    width: 56px;
+    height: 56px;
+  }
+
+  .viewer__toolbar .viewer__button svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .viewer__nav {
+    top: auto;
+    bottom: calc(1.45rem + env(safe-area-inset-bottom));
+    transform: none;
+    width: 56px;
+    height: 56px;
+    background: rgba(24, 27, 34, 0.78);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  }
+
+  .viewer__nav--previous {
+    left: 0.75rem;
+  }
+
+  .viewer__nav--next {
+    right: 0.75rem;
+  }
+
+  .viewer__caption {
+    top: calc(0.9rem + env(safe-area-inset-top));
+    bottom: auto;
+    max-width: calc(100% - 1.5rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

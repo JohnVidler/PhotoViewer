@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { resolveScope, sendScopeError } from "../services/access";
+import { ownerPath, resolveScope, sendScopeError } from "../services/access";
+import { getAlbumDescription } from "../services/albumDescriptions";
 import { browseDirectory } from "../services/fileScanner";
 import { listSharedPaths } from "../services/shares";
 
@@ -21,6 +22,11 @@ browseRouter.get("/", async (req, res) => {
           }
         }
       }
+    }
+
+    const description = getAlbumDescription(scope.ownerId, ownerPath(scope, scope.relPath));
+    if (description) {
+      result.description = description;
     }
 
     res.set("Cache-Control", "no-store");
